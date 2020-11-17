@@ -1,8 +1,8 @@
 #-- my_code_hw01.py
 #-- hw01 GEO1015.2020
-#-- [YOUR NAME]
-#-- [YOUR STUDENT NUMBER] 
-#-- [YOUR NAME]
+#-- Pratyush Kumar
+#-- 5359252
+#-- Simon Pena Pereria
 #-- [YOUR STUDENT NUMBER] 
 
 
