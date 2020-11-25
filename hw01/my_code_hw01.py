@@ -63,8 +63,6 @@ def nn_interpolation(list_pts_3d, j_nn):
     
     bbox = ((xmin,ymin) , (xmin + no_x*cellsize , ymin + no_y*cellsize))
 
-    conv_points = np_list[:,[0,1]]
-    hull = scipy.spatial.ConvexHull(conv_points).simplices
 
     
     #-- to speed up the nearest neighbour us a kd-tree
