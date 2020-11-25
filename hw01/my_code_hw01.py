@@ -52,21 +52,25 @@ def nn_interpolation(list_pts_3d, j_nn):
     no_y=0
 
     if (xmax-xmin)%cellsize == 0:
-        no_x = (xmax-xmin)/cellsize
+        no_x = int((xmax-xmin)/cellsize)
     else:
-        no_x = (xmax-xmin)/cellsize +1
+        no_x = int((xmax-xmin)/cellsize) +1
 
     if (ymax-ymin)%cellsize == 0:
-        no_y = (ymax-ymin)/cellsize
+        no_y = int((ymax-ymin)/cellsize)
     else:
-        no_y = (ymax-ymin)/cellsize +1
+        no_y = int((ymax-ymin)/cellsize) +1
     
-    
+    bbox = ((xmin,ymin) , (xmin + no_x*cellsize , ymin + no_y*cellsize))
+
+    conv_points = np_list[:,[0,1]]
+    hull = scipy.spatial.ConvexHull(conv_points).simplices
+
     
     #-- to speed up the nearest neighbour us a kd-tree
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html#scipy.spatial.KDTree
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
-    # kd = scipy.spatial.KDTree(list_pts)
+    kd = scipy.spatial.KDTree(list_pts)
     # d, i = kd.query(p, k=1)
 
     print("File written to", j_nn['output-file'])
