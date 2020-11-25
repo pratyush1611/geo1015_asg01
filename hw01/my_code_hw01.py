@@ -63,6 +63,7 @@ def nn_interpolation(list_pts_3d, j_nn):
     
     bbox = ((xmin,ymin) , (xmin + no_x*cellsize , ymin + no_y*cellsize))
 
+#%%
 
     
     #-- to speed up the nearest neighbour us a kd-tree
@@ -88,8 +89,8 @@ def idw_interpolation(list_pts_3d, j_idw):
         returns the value of the area
  
     """  
-    # print("cellsize:", j_idw['cellsize'])
-    # print("radius:", j_idw['radius'])
+    print("cellsize:", j_idw['cellsize'])
+    print("radius:", j_idw['radius'])
 
     #-- to speed up the nearest neighbour us a kd-tree
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html#scipy.spatial.KDTree
@@ -143,3 +144,5 @@ def kriging_interpolation(list_pts_3d, j_kriging):
     
     
     print("File written to", j_kriging['output-file'])
+
+# %%
