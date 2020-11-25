@@ -59,12 +59,9 @@ def nn_interpolation(list_pts_3d, j_nn):
     
     bbox = ((xmin,ymin) , (xmin + no_x*cellsize , ymin + no_y*cellsize))
 
-<<<<<<< HEAD
     #create convex hull
     conv_points = np_list[:,[0,1]]
     hull = scipy.spatial.ConvexHull(conv_points).simplices
-=======
->>>>>>> 4a4fc380f0546551a1eefb4940fb1555f49c5185
 
     #raster creation
     rast_x = np.arange(bbox[0][0],bbox[1][0], cellsize)
