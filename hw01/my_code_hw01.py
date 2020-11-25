@@ -9,7 +9,7 @@
 #-- import outside the standard Python library are not allowed, just those:
 #%%
 import math
-import numpy
+import numpy as np
 import scipy.spatial
 import startin 
 #-----
@@ -30,24 +30,20 @@ def nn_interpolation(list_pts_3d, j_nn):
  
     """  
     print("cellsize:", j_nn['cellsize'])
-    cellsize =  j_nn['cellsize']
+    cellsize =  float(j_nn['cellsize'])
     #compute bbox
-    #convert list3d to munpy array find min and max coordinates
+    #convert list3d to numpy array find min and max coordinates
     np_list = np.array(list_pts_3d)
     x_list = np_list[:,0].copy()
     y_list = np_list[:,1].copy()
-    
     x_list.sort()
     y_list.sort()
-
     xmin=x_list[0]
     xmax=x_list[-1]
-    
     ymin=y_list[0]
     ymax=y_list[-1]
 
-    # make cells
-    #determine no of cells
+    #determine no of cells and create bbox
     no_x=0
     no_y=0
 
@@ -65,13 +61,42 @@ def nn_interpolation(list_pts_3d, j_nn):
 
 #%%
 
-    
-    #-- to speed up the nearest neighbour us a kd-tree
+    #create convex hull
+    conv_points = np_list[:,[0,1]]
+    hull = scipy.spatial.ConvexHull(conv_points).simplices
+
+
+    #raster creation
+    rast_x = np.arange(bbox[0][0],bbox[1][0], cellsize)
+    rast_y = np.arange(bbox[0][1],bbox[1][1], cellsize)
+    rast_y = np.flip(rast_y)
+
+    rast_coord = np.array([[i,j] for i in rast_x for j in rast_y])
+    #-- to sjkpeed up the nearest neighbour us a kd-tree
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html#scipy.spatial.KDTree
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
+    
+    # list_pts = list(zip( np_list[:,0],np_list[:,1]))
+    list_pts = np_list[:,[0,1]]
     kd = scipy.spatial.KDTree(list_pts)
-    # d, i = kd.query(p, k=1)
-
+    # for x in rast_coord:
+    _ , indx = kd.query(rast_coord, k=1)
+    
+    #to put in the values of z:
+    z_vals = np_list[:,2]
+    # z_rast=[]
+    # for i in indx:
+    #     z_rast.append(z_vals[i]) 
+    z_rast = [z_vals[i] for i in indx]
+    z_rast = np.array(z_rast)
+    z_rast=z_rast.reshape(no_x, no_y)
+        
+    ##writing asc file
+    fh = open(j_nn['output-file'], "w")
+    fh.write(f"NCOLS {no_y}\nNROWS {no_x}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE{-9999}\n") 
+    for i in z_rast:
+        fh.write(" ".join([str(_) for _ in i]) + '\n')
+    fh.close()
     print("File written to", j_nn['output-file'])
 
 
