@@ -30,6 +30,7 @@ def nn_interpolation(list_pts_3d, j_nn):
  
     """  
     print("cellsize:", j_nn['cellsize'])
+    cellsize =  j_nn['cellsize']
     #compute bbox
     #convert list3d to munpy array find min and max coordinates
     np_list = np.array(list_pts_3d)
@@ -45,6 +46,23 @@ def nn_interpolation(list_pts_3d, j_nn):
     ymin=y_list[0]
     ymax=y_list[-1]
 
+    # make cells
+    #determine no of cells
+    no_x=0
+    no_y=0
+
+    if (xmax-xmin)%cellsize == 0:
+        no_x = (xmax-xmin)/cellsize
+    else:
+        no_x = (xmax-xmin)/cellsize +1
+
+    if (ymax-ymin)%cellsize == 0:
+        no_y = (ymax-ymin)/cellsize
+    else:
+        no_y = (ymax-ymin)/cellsize +1
+    
+    
+    
     #-- to speed up the nearest neighbour us a kd-tree
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html#scipy.spatial.KDTree
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
