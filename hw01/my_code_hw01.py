@@ -66,27 +66,20 @@ def nn_interpolation(list_pts_3d, j_nn):
     #raster creation
     rast_x = np.arange(bbox[0][0],bbox[1][0], cellsize)
     rast_y = np.arange(bbox[0][1],bbox[1][1], cellsize)
-    rast_y = np.flip(rast_y)
+    rast_x = np.flip(rast_x)
+    # rast_y = np.flip(rast_y)
 
     rast_coord = np.array([[i,j] for i in rast_x for j in rast_y])
-    #-- to sjkpeed up the nearest neighbour us a kd-tree
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html#scipy.spatial.KDTree
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
-    
-    # list_pts = list(zip( np_list[:,0],np_list[:,1]))
+
     list_pts = np_list[:,[0,1]]
     kd = scipy.spatial.KDTree(list_pts)
-    # for x in rast_coord:
+
     _ , indx = kd.query(rast_coord, k=1)
     
     #to put in the values of z:
     z_vals = np_list[:,2]
-    # z_rast=[]
-    # for i in indx:
-    #     z_rast.append(z_vals[i]) 
-    z_rast = [z_vals[i] for i in indx]
-    z_rast = np.array(z_rast)
-    z_rast=z_rast.reshape(no_x, no_y)
+    z_rast = np.array([z_vals[i] for i in indx])
+    z_rast = z_rast.reshape(no_x, no_y)
         
     ##writing asc file
     fh = open(j_nn['output-file'], "w")
