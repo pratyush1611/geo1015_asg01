@@ -7,6 +7,7 @@
 
 
 #-- import outside the standard Python library are not allowed, just those:
+#%%
 import math
 import numpy
 import scipy.spatial
@@ -14,7 +15,7 @@ import startin
 #-----
 
 
-
+#%%
 def nn_interpolation(list_pts_3d, j_nn):
     """
     !!! TO BE COMPLETED !!!
@@ -28,7 +29,21 @@ def nn_interpolation(list_pts_3d, j_nn):
         returns the value of the area
  
     """  
-    # print("cellsize:", j_nn['cellsize'])
+    print("cellsize:", j_nn['cellsize'])
+    #compute bbox
+    #convert list3d to munpy array find min and max coordinates
+    np_list = np.array(list_pts_3d)
+    x_list = np_list[:,0].copy()
+    y_list = np_list[:,1].copy()
+    
+    x_list.sort()
+    y_list.sort()
+
+    xmin=x_list[0]
+    xmax=x_list[-1]
+    
+    ymin=y_list[0]
+    ymax=y_list[-1]
 
     #-- to speed up the nearest neighbour us a kd-tree
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html#scipy.spatial.KDTree
