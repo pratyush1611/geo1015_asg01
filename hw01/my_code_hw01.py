@@ -2,7 +2,7 @@
 #-- hw01 GEO1015.2020
 #-- Pratyush Kumar
 #-- 5359252
-#-- Simon Pena Pereria
+#-- Simon Pena Pereira
 #-- 5391210
 
 
