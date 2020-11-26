@@ -75,7 +75,7 @@ def nn_interpolation(list_pts_3d, j_nn):
         rast_z.append(z_vals[indx])
     
     rast_z=np.array(rast_z)
-    rast_z=rast_z.reshap(int(no_x), int(no_y))
+    rast_z=rast_z.reshape(int(no_x), int(no_y))
     #to put in the values of z:
     # z_rast = np.array([z_vals[i] for i in indx])
     # z_rast = z_rast.reshape(int(no_x), int(no_y))
