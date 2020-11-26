@@ -31,11 +31,12 @@ def nn_interpolation(list_pts_3d, j_nn):
     """  
     print("cellsize:", j_nn['cellsize'])
     cellsize =  float(j_nn['cellsize'])
-    #compute bbox
-    #convert list3d to numpy array find min and max coordinates
+    #compute bbox     #convert list3d to numpy array find min and max coordinates
     np_list = np.array(list_pts_3d)
     x_list = np_list[:,0].copy()
     y_list = np_list[:,1].copy()
+    z_list = np_list[:,2].copy()
+    
     xmin, xmax, ymin, ymax = x_list.min(), x_list.max(), y_list.min(), y_list.max()
 
     #determine no of cells and create bbox
@@ -53,16 +54,10 @@ def nn_interpolation(list_pts_3d, j_nn):
     
     bbox = ((xmin,ymin) , (xmin + no_x*cellsize , ymin + no_y*cellsize))
 
-    #create convex hull
-    conv_points = np_list[:,[0,1]]
-    hull = scipy.spatial.ConvexHull(conv_points).simplices
-
     #raster creation
     rast_x = np.arange(bbox[0][0],bbox[1][0], cellsize)
     rast_y = np.arange(bbox[0][1],bbox[1][1], cellsize)
     rast_x = np.flip(rast_x)
-    # rast_y = np.flip(rast_y)
-    z_vals = np_list[:,2]
     rast_z=[]
 
     rast_coord = np.array([[i,j] for i in rast_x for j in rast_y])
@@ -72,14 +67,18 @@ def nn_interpolation(list_pts_3d, j_nn):
 
     for coord in rast_coord:
         _ , indx = kd.query(coord, k=1)
-        rast_z.append(z_vals[indx])
+        rast_z.append(z_list[indx])
     
+    #to put in the interpolation for z values
     rast_z=np.array(rast_z)
     rast_z=rast_z.reshape(int(no_x), int(no_y))
-    #to put in the values of z:
-    # z_rast = np.array([z_vals[i] for i in indx])
-    # z_rast = z_rast.reshape(int(no_x), int(no_y))
-        
+
+    #convex hull set anything outside it as     
+    #create convex hull
+    conv_points = np_list[:,[0,1]]
+    hull = scipy.spatial.ConvexHull(conv_points).simplices
+
+
     ##writing asc file
     fh = open(j_nn['output-file'], "w")
     fh.write(f"NCOLS {no_y}\nNROWS {no_x}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE{-9999}\n") 
