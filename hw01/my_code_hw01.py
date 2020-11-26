@@ -36,26 +36,20 @@ def nn_interpolation(list_pts_3d, j_nn):
     np_list = np.array(list_pts_3d)
     x_list = np_list[:,0].copy()
     y_list = np_list[:,1].copy()
-    x_list.sort()
-    y_list.sort()
-    xmin=x_list[0]
-    xmax=x_list[-1]
-    ymin=y_list[0]
-    ymax=y_list[-1]
+    xmin, xmax, ymin, ymax = x_list.min(), x_list.max(), y_list.min(), y_list.max()
 
     #determine no of cells and create bbox
-    no_x=0
-    no_y=0
+    no_x, no_y = 0, 0
 
     if (xmax-xmin)%cellsize == 0:
-        no_x = int((xmax-xmin)/cellsize)
+        no_x = ((xmax-xmin)//cellsize)
     else:
-        no_x = int((xmax-xmin)/cellsize) +1
+        no_x = ((xmax-xmin)//cellsize) +1
 
     if (ymax-ymin)%cellsize == 0:
-        no_y = int((ymax-ymin)/cellsize)
+        no_y = ((ymax-ymin)//cellsize)
     else:
-        no_y = int((ymax-ymin)/cellsize) +1
+        no_y = ((ymax-ymin)//cellsize) +1
     
     bbox = ((xmin,ymin) , (xmin + no_x*cellsize , ymin + no_y*cellsize))
 
@@ -68,29 +62,34 @@ def nn_interpolation(list_pts_3d, j_nn):
     rast_y = np.arange(bbox[0][1],bbox[1][1], cellsize)
     rast_x = np.flip(rast_x)
     # rast_y = np.flip(rast_y)
+    z_vals = np_list[:,2]
+    rast_z=[]
 
     rast_coord = np.array([[i,j] for i in rast_x for j in rast_y])
 
     list_pts = np_list[:,[0,1]]
     kd = scipy.spatial.KDTree(list_pts)
 
-    _ , indx = kd.query(rast_coord, k=1)
+    for coord in rast_coord:
+        _ , indx = kd.query(coord, k=1)
+        rast_z.append(z_vals[indx])
     
+    rast_z=np.array(rast_z)
+    rast_z=rast_z.reshap(int(no_x), int(no_y))
     #to put in the values of z:
-    z_vals = np_list[:,2]
-    z_rast = np.array([z_vals[i] for i in indx])
-    z_rast = z_rast.reshape(no_x, no_y)
+    # z_rast = np.array([z_vals[i] for i in indx])
+    # z_rast = z_rast.reshape(int(no_x), int(no_y))
         
     ##writing asc file
     fh = open(j_nn['output-file'], "w")
     fh.write(f"NCOLS {no_y}\nNROWS {no_x}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE{-9999}\n") 
-    for i in z_rast:
+    for i in rast_z:
         fh.write(" ".join([str(_) for _ in i]) + '\n')
     fh.close()
     print("File written to", j_nn['output-file'])
 
 
-
+#%%
 def idw_interpolation(list_pts_3d, j_idw):
     """
     !!! TO BE COMPLETED !!!
