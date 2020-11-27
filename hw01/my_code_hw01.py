@@ -14,6 +14,47 @@ import scipy.spatial
 import startin 
 #-----
 
+#%%
+def raster_frame_creator(np_list ,cellsize):
+    """returns raster as a 1d array (list of all coordinates of pixels referring to lower left)
+    the no of cells as a tuple and the bounding box         
+
+    Args:
+        np_list ([numpy array]): [numpy array of list of lists sent to function]
+        cellsize ([float]): [cellsize as processed and passed on to main function]
+    """
+    #compute bbox 
+    x_list = np_list[:,0].copy()
+    y_list = np_list[:,1].copy()
+    z_list = np_list[:,2].copy()
+    
+    xmin, xmax, ymin, ymax = x_list.min(), x_list.max(), y_list.min(), y_list.max()
+
+    #determine no of cells and create bbox
+    no_x, no_y = 0, 0
+
+    if (xmax-xmin)%cellsize == 0:
+        no_x = int((xmax-xmin)//cellsize)
+    else:
+        no_x = int((xmax-xmin)//cellsize) +1
+
+    if (ymax-ymin)%cellsize == 0:
+        no_y = int((ymax-ymin)//cellsize)
+    else:
+        no_y = int((ymax-ymin)//cellsize) +1
+    
+    bbox = ((xmin,ymin) , (xmin + no_x*cellsize , ymin + no_y*cellsize))
+
+    #raster creation
+    rast_x = np.arange(bbox[0][0],bbox[1][0], cellsize)
+    rast_y = np.arange(bbox[0][1],bbox[1][1], cellsize)
+    rast_x = np.flip(rast_x)
+
+    rast_coord = np.array([[i,j] for i in rast_x for j in rast_y])
+
+    return(rast_coord , z_list , (no_x, no_y) , bbox)
+
+# def raster_writer(rast_nm):
 
 #%%
 def nn_interpolation(list_pts_3d, j_nn):
@@ -33,38 +74,15 @@ def nn_interpolation(list_pts_3d, j_nn):
     cellsize =  float(j_nn['cellsize'])
     #compute bbox     #convert list3d to numpy array find min and max coordinates
     np_list = np.array(list_pts_3d)
-    x_list = np_list[:,0].copy()
-    y_list = np_list[:,1].copy()
-    z_list = np_list[:,2].copy()
-    
-    xmin, xmax, ymin, ymax = x_list.min(), x_list.max(), y_list.min(), y_list.max()
-
-    #determine no of cells and create bbox
-    no_x, no_y = 0, 0
-
-    if (xmax-xmin)%cellsize == 0:
-        no_x = ((xmax-xmin)//cellsize)
-    else:
-        no_x = ((xmax-xmin)//cellsize) +1
-
-    if (ymax-ymin)%cellsize == 0:
-        no_y = ((ymax-ymin)//cellsize)
-    else:
-        no_y = ((ymax-ymin)//cellsize) +1
-    
-    bbox = ((xmin,ymin) , (xmin + no_x*cellsize , ymin + no_y*cellsize))
-
-    #raster creation
-    rast_x = np.arange(bbox[0][0],bbox[1][0], cellsize)
-    rast_y = np.arange(bbox[0][1],bbox[1][1], cellsize)
-    rast_x = np.flip(rast_x)
-    rast_z=[]
-
-    rast_coord = np.array([[i,j] for i in rast_x for j in rast_y])
+    #make raster frame as 1d
+    rast_coord , z_list,(no_x,no_y) ,bbox= raster_frame_creator(np_list , cellsize)
+    xmin , ymin = bbox[0]
 
     list_pts = np_list[:,[0,1]]
     kd = scipy.spatial.KDTree(list_pts)
-
+    
+    rast_z = []
+    
     for coord in rast_coord:
         _ , indx = kd.query(coord, k=1)
         rast_z.append(z_list[indx])
@@ -75,9 +93,7 @@ def nn_interpolation(list_pts_3d, j_nn):
 
     #convex hull set anything outside it as     
     #create convex hull
-    conv_points = np_list[:,[0,1]]
-    hull = scipy.spatial.ConvexHull(conv_points).simplices
-
+    hull = scipy.spatial.ConvexHull(list_pts)
 
     ##writing asc file
     fh = open(j_nn['output-file'], "w")
@@ -113,7 +129,7 @@ def idw_interpolation(list_pts_3d, j_idw):
     
     print("File written to", j_idw['output-file'])
 
-
+#%%
 def tin_interpolation(list_pts_3d, j_tin):
     """
     !!! TO BE COMPLETED !!!
@@ -127,9 +143,17 @@ def tin_interpolation(list_pts_3d, j_tin):
         returns the value of the area
  
     """  
+    #take params and create a raster outline as in nn
+    cellsize =  float(j_tin['cellsize'])
+    np_list = np.array(list_pts_3d)
+    
+    rast_coord , z_list,(no_x,no_y) ,bbox= raster_frame_creator(np_list , cellsize)
+    xmin , ymin = bbox[0]
+
+
     #-- example to construct the DT with scipy
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Delaunay.html#scipy.spatial.Delaunay
-    # dt = scipy.spatial.Delaunay([])
+    dt = scipy.spatial.Delaunay(np_list[:,[0,1]])
 
     #-- example to construct the DT with startin
     # minimal docs: https://github.com/hugoledoux/startin_python/blob/master/docs/doc.md
@@ -140,7 +164,7 @@ def tin_interpolation(list_pts_3d, j_tin):
     
     print("File written to", j_tin['output-file'])
 
-
+#%%
 def kriging_interpolation(list_pts_3d, j_kriging):
     """
     !!! TO BE COMPLETED !!!
