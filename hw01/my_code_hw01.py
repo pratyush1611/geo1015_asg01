@@ -142,22 +142,46 @@ def idw_interpolation(list_pts_3d, j_idw):
 
     cellsize =  float(j_idw['cellsize'])
     radius =  float(j_idw['radius'])
+    power =  float(j_idw['power'])
     np_list = np.array(list_pts_3d)
     
     rast_coord , z_list , (no_x, no_y), bbox = raster_frame_creator(np_list ,cellsize)
-
-    list_pts = np_list[:,[0,1]]
+    x_list = np_list[:,0].copy()
+    y_list = np_list[:,1].copy()
+    z_list = np_list[:,2].copy()
     xmin , ymin = bbox[0]
-
-    kd = scipy.spatial.KDTree(list_pts)
-   # i = kd.query_ball_point(rast_coord, radius)
     
-
-    idw_rast_z = []
+    list_pts = np_list[:,[0,1]]
+    
+    
+    kd = scipy.spatial.KDTree(list_pts)
+    z_val = []
     
     for coord in rast_coord:
-        _ , indx = kd.query_ball_point(coord, radius)
-        idw_rast_z.append(z_list[indx])
+        i = kd.query_ball_point(coord, radius)
+
+        if not i:
+            z_val.append(-9999)
+                
+        weights = []
+        known_z = []
+
+        for indx in i:
+            i_x, i_y = coord[0], coord[1] 
+            p_x, p_y = list_pts[indx][0], list_pts[indx][1]
+            dist = ((p_x - i_x)**2 + (p_y - i_y)**2)
+            weight = (1/(dist)**power)
+            
+            weights.append(weight)
+            z = z_list[indx]
+            known_z.append(z) 
+
+        w_array = np.array(weights)
+        z_array = np.array(known_z)
+
+        z_value = (sum(w_array * z_array)/sum(w_array))
+        idw_rast_z.append(z_value)
+        
 
     rast_z=np.array(idw_rast_z)
     rast_z=rast_z.reshape(int(no_x), int(no_y))
@@ -173,6 +197,8 @@ def idw_interpolation(list_pts_3d, j_idw):
         fh.write(" ".join([str(_) for _ in i]) + '\n')
     fh.close()
     print("File written to", j_idw['output-file'])
+
+
 
 #%%
 def tin_interpolation(list_pts_3d, j_tin):
