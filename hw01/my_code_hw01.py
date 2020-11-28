@@ -139,7 +139,39 @@ def idw_interpolation(list_pts_3d, j_idw):
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
     # kd = scipy.spatial.KDTree(list_pts)
     # i = kd.query_ball_point(p, radius)
+
+    cellsize =  float(j_idw['cellsize'])
+    radius =  float(j_idw['radius'])
+    np_list = np.array(list_pts_3d)
     
+    rast_coord , z_list , (no_x, no_y), bbox = raster_frame_creator(np_list ,cellsize)
+
+    list_pts = np_list[:,[0,1]]
+    xmin , ymin = bbox[0]
+
+    kd = scipy.spatial.KDTree(list_pts)
+   # i = kd.query_ball_point(rast_coord, radius)
+    
+
+    idw_rast_z = []
+    
+    for coord in rast_coord:
+        _ , indx = kd.query_ball_point(coord, radius)
+        idw_rast_z.append(z_list[indx])
+
+    rast_z=np.array(idw_rast_z)
+    rast_z=rast_z.reshape(int(no_x), int(no_y))
+
+    #convex hull set anything outside it as     
+    #create convex hull
+    hull = scipy.spatial.ConvexHull(list_pts)
+
+    ##writing asc file
+    fh = open(j_idw['output-file'], "w")
+    fh.write(f"NCOLS {no_y}\nNROWS {no_x}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE{-9999}\n") 
+    for i in rast_z:
+        fh.write(" ".join([str(_) for _ in i]) + '\n')
+    fh.close()
     print("File written to", j_idw['output-file'])
 
 #%%
