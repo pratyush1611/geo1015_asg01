@@ -52,12 +52,6 @@ def raster_frame_creator(np_list ,cellsize):
     conv_points = np_list[:,[0,1]]
     hull = scipy.spatial.ConvexHull(conv_points).simplices
 
-
-    #create convex hull
-    conv_points = np_list[:,[0,1]]
-    hull = scipy.spatial.ConvexHull(conv_points).simplices
-
-
     #raster creation
     rast_x = np.arange(bbox[0][0],bbox[1][0], cellsize)
     rast_y = np.arange(bbox[0][1],bbox[1][1], cellsize)
@@ -67,7 +61,14 @@ def raster_frame_creator(np_list ,cellsize):
 
     return(rast_coord , z_list , (no_x, no_y) , bbox)
 
-# def raster_writer(rast_nm):
+def asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z):
+    ##writing asc file
+    fh = open(filename, "w")
+    fh.write(f"NCOLS {no_y}\nNROWS {no_x}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE{-9999}\n") 
+    for i in rast_z:
+        fh.write(" ".join([str(_) for _ in i]) + '\n')
+    fh.close()
+    print("File written to", filename)    
 
 #%%
 def nn_interpolation(list_pts_3d, j_nn):
@@ -107,14 +108,8 @@ def nn_interpolation(list_pts_3d, j_nn):
     #convex hull set anything outside it as     
     #create convex hull
     hull = scipy.spatial.ConvexHull(list_pts)
-
-    ##writing asc file
-    fh = open(j_nn['output-file'], "w")
-    fh.write(f"NCOLS {no_y}\nNROWS {no_x}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE{-9999}\n") 
-    for i in rast_z:
-        fh.write(" ".join([str(_) for _ in i]) + '\n')
-    fh.close()
-    print("File written to", j_nn['output-file'])
+    filename = j_nn['output-file']
+    asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
 
 
 #%%
@@ -155,50 +150,55 @@ def idw_interpolation(list_pts_3d, j_idw):
     
     
     kd = scipy.spatial.KDTree(list_pts)
-    z_val = []
-    
+    idw_rast_z = []
+    counter = 0
     for coord in rast_coord:
         i = kd.query_ball_point(coord, radius)
+        
+        if not i: 
+            idw_rast_z.append(-9999)
+            counter +=1
+            print(counter)
+        else:         
+            weights = []
+            known_z = []
 
-        if not i:
-            z_val.append(-9999)
+            for indx in i:
+                i_x, i_y = coord[0], coord[1] 
+                p_x, p_y = list_pts[indx][0], list_pts[indx][1]
                 
-        weights = []
-        known_z = []
+                if np.all(list_pts[indx] == coord):
+                    weight = 1
+                    z = z_list[indx]
 
-        for indx in i:
-            i_x, i_y = coord[0], coord[1] 
-            p_x, p_y = list_pts[indx][0], list_pts[indx][1]
-            dist = ((p_x - i_x)**2 + (p_y - i_y)**2)
-            weight = (1/(dist)**power)
-            
-            weights.append(weight)
-            z = z_list[indx]
-            known_z.append(z) 
+                    weights.append(weight)
+                    known_z.append(z) 
 
-        w_array = np.array(weights)
-        z_array = np.array(known_z)
+                else: 
+                    dist = ((p_x - i_x)**2 + (p_y - i_y)**2)
+                    weight = (1/(dist)**power)
+                    z = z_list[indx]
+                    
+                    weights.append(weight)
+                    known_z.append(z) 
 
-        z_value = (sum(w_array * z_array)/sum(w_array))
-        idw_rast_z.append(z_value)
+            w_array = np.array(weights)
+            z_array = np.array(known_z)
+
+            z_value = (sum(w_array * z_array)/sum(w_array))
+            idw_rast_z.append(z_value)
         
 
-    rast_z=np.array(idw_rast_z)
-    rast_z=rast_z.reshape(int(no_x), int(no_y))
+    rast_z = np.array(idw_rast_z)
+    rast_z = rast_z.reshape(int(no_x), int(no_y))
 
     #convex hull set anything outside it as     
     #create convex hull
     hull = scipy.spatial.ConvexHull(list_pts)
+    filename = j_idw['output-file']
 
-    ##writing asc file
-    fh = open(j_idw['output-file'], "w")
-    fh.write(f"NCOLS {no_y}\nNROWS {no_x}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE{-9999}\n") 
-    for i in rast_z:
-        fh.write(" ".join([str(_) for _ in i]) + '\n')
-    fh.close()
-    print("File written to", j_idw['output-file'])
-
-
+    asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
+    
 
 #%%
 def tin_interpolation(list_pts_3d, j_tin):
