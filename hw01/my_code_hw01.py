@@ -243,8 +243,65 @@ def kriging_interpolation(list_pts_3d, j_kriging):
         returns the value of the area
  
     """  
+    cellsize =  float(j_kriging['cellsize'])
+    radius =  float(j_kriging['radius'])
+
+
+    rast_coord , z_list , (no_x, no_y), bbox = raster_frame_creator(np_list ,cellsize)
+    x_list = np_list[:,0].copy()
+    y_list = np_list[:,1].copy()
+    z_list = np_list[:,2].copy()
+    xmin , ymin = bbox[0]
     
+    list_pts = np_list[:,[0,1]]
     
-    print("File written to", j_kriging['output-file'])
+    kd = scipy.spatial.KDTree(list_pts)
+    krig_rast_z = []
+    
+    for coord in rast_coord:
+        i = kd.query_ball_point(coord, radius)
+        if not i: 
+            krig_rast_z.append(-9999)
+        else:         
+            weights = []
+            known_z = []
+
+            for indx in i:
+                i_x, i_y = coord[0], coord[1] 
+                p_x, p_y = list_pts[indx][0], list_pts[indx][1]
+                
+                if np.all(list_pts[indx] == coord):
+                    weight = 1
+                    z = z_list[indx]
+
+                    weights.append(weight)
+                    known_z.append(z) 
+                else: 
+                    dist = ((p_x - i_x)**2 + (p_y - i_y)**2)
+                    weight = (1/(dist)**power)
+                    z = z_list[indx]
+                    
+                    weights.append(weight)
+                    known_z.append(z) 
+
+            w_array = np.array(weights)
+            z_array = np.array(known_z)
+
+            z_value = (sum(w_array * z_array)/sum(w_array))
+            krig_rast_z.append(z_value)
+        '''
+        rast_z = np.array(krig_rast_z)
+        rast_z = rast_z.reshape(int(no_x), int(no_y))
+        '''
+
+        #weighted z values need to be implemented in the matrices 
+        
+    #convex hull set anything outside it as     
+    #create convex hull
+    hull = scipy.spatial.ConvexHull(list_pts)
+
+    filename = j_kriging['output-file']
+    asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
+    
 
 # %%
