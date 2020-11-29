@@ -46,8 +46,6 @@ def raster_frame_creator(np_list ,cellsize):
     bbox = ((xmin,ymin) , (xmin + no_x*cellsize , ymin + no_y*cellsize))
 
 
-#%%
-
     #create convex hull
     conv_points = np_list[:,[0,1]]
     hull = scipy.spatial.ConvexHull(conv_points).simplices
@@ -64,7 +62,7 @@ def raster_frame_creator(np_list ,cellsize):
 def asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z):
     ##writing asc file
     fh = open(filename, "w")
-    fh.write(f"NCOLS {no_y}\nNROWS {no_x}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE{-9999}\n") 
+    fh.write(f"NCOLS {no_y}\nNROWS {no_x}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE {-9999}\n") 
     for i in rast_z:
         fh.write(" ".join([str(_) for _ in i]) + '\n')
     fh.close()
@@ -211,24 +209,52 @@ def tin_interpolation(list_pts_3d, j_tin):
     #take params and create a raster outline as in nn
     cellsize =  float(j_tin['cellsize'])
     np_list = np.array(list_pts_3d)
-    
+    # load the rast coord and the other things using predefined function
     rast_coord , z_list,(no_x,no_y) ,bbox= raster_frame_creator(np_list , cellsize)
     xmin , ymin = bbox[0]
-
-
-    #-- example to construct the DT with scipy
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Delaunay.html#scipy.spatial.Delaunay
+    # rast_coord = rast_coord.reshape(int(no_x),int(no_y))
+    rast_z = []
+    # delauney triangulation of the x and y values obtained from file
     dt = scipy.spatial.Delaunay(np_list[:,[0,1]])
 
-    #-- example to construct the DT with startin
-    # minimal docs: https://github.com/hugoledoux/startin_python/blob/master/docs/doc.md
-    # how to use it: https://github.com/hugoledoux/startin_python#a-full-simple-example
-    # you are *not* allowed to use the function for the tin linear interpolation that I wrote for startin
-    # you need to write your own code for this step
-    # but you can of course read the code [dt.interpolate_tin_linear(x, y)]
-    
-    print("File written to", j_tin['output-file'])
+    counter=0
+    # find triangles
+    for coord in rast_coord:
+        tri_indx =  dt.find_simplex(coord)
+        if (not tri_indx) :
+            # NODATA
+            rast_z.append(-9999)
+            continue
+        elif (tri_indx == -1):
+            # NODATA
+            rast_z.append(-9999)            
+            continue
+        # else:
+        # vi1,vi2,vi3 = dt.simplices[tri_indx] # indices of vertcies of the triangle
+        # v1,v2,v3 =  np_list[[vi1,vi2,vi3],:] # coordinates of the vertices of the triangle
+        vert =  np_list[ dt.simplices[tri_indx] ,:] # coordinates of the vertices of the triangle
+        #calculate barycentric weights
+        # if (((vert[1][1] - vert[2][1])*(vert[0][0]-vert[2][0])) + ((vert[2][0]-vert[1][0])*(vert[0][1]-vert[2][1])) != 0):
+        #     print(f"haha {counter}")
+        #     counter+=1 # set up a counter to see
 
+
+        w1 = (((vert[1][1] - vert[2][1])*(coord[0] - vert[2][0])) + ((vert[2][0]-vert[1][0])*(coord[1]-vert[2][1])) /
+                ((vert[1][1] - vert[2][1])*(vert[0][0]-vert[2][0])) + ((vert[2][0]-vert[1][0])*(vert[0][1]-vert[2][1]))
+                )
+
+        w2 = (((vert[2][1] - vert[0][1])*(coord[0] - vert[2][0])) + ((vert[0][0]-vert[2][0])*(coord[1] - vert[2][1])) /
+              ((vert[1][1] - vert[2][1])*(vert[0][0]-vert[2][0])) + ((vert[2][0]-vert[1][0])*(vert[0][1]-vert[2][1]))
+                )            
+        w3 = 1 - w1 - w2
+        # once weight found multiply weight with the z values at vertex of each triangle
+        z_val = vert[0][2]*w1 + vert[1][2]*w2 + vert[2][2]*w3
+        rast_z.append(z_val)
+
+    rast_z = np.array(rast_z).reshape(no_x, no_y)    
+    filename = j_tin['output-file']
+    asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
+    
 #%%
 def kriging_interpolation(list_pts_3d, j_kriging):
     """
