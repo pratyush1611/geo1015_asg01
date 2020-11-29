@@ -148,17 +148,13 @@ def idw_interpolation(list_pts_3d, j_idw):
     
     list_pts = np_list[:,[0,1]]
     
-    
     kd = scipy.spatial.KDTree(list_pts)
     idw_rast_z = []
-    counter = 0
+    
     for coord in rast_coord:
         i = kd.query_ball_point(coord, radius)
-        
         if not i: 
             idw_rast_z.append(-9999)
-            counter +=1
-            print(counter)
         else:         
             weights = []
             known_z = []
@@ -173,7 +169,6 @@ def idw_interpolation(list_pts_3d, j_idw):
 
                     weights.append(weight)
                     known_z.append(z) 
-
                 else: 
                     dist = ((p_x - i_x)**2 + (p_y - i_y)**2)
                     weight = (1/(dist)**power)
@@ -187,7 +182,6 @@ def idw_interpolation(list_pts_3d, j_idw):
 
             z_value = (sum(w_array * z_array)/sum(w_array))
             idw_rast_z.append(z_value)
-        
 
     rast_z = np.array(idw_rast_z)
     rast_z = rast_z.reshape(int(no_x), int(no_y))
