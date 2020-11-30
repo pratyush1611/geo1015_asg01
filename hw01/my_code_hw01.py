@@ -217,7 +217,6 @@ def tin_interpolation(list_pts_3d, j_tin):
     # delauney triangulation of the x and y values obtained from file
     dt = scipy.spatial.Delaunay(np_list[:,[0,1]])
 
-    counter=0
     # find triangles
     for coord in rast_coord:
         tri_indx =  dt.find_simplex(coord)
@@ -229,28 +228,22 @@ def tin_interpolation(list_pts_3d, j_tin):
             # NODATA
             rast_z.append(-9999)            
             continue
-        # else:
-        # vi1,vi2,vi3 = dt.simplices[tri_indx] # indices of vertcies of the triangle
-        # v1,v2,v3 =  np_list[[vi1,vi2,vi3],:] # coordinates of the vertices of the triangle
+
         vert =  np_list[ dt.simplices[tri_indx] ,:] # coordinates of the vertices of the triangle
         #calculate barycentric weights
-        # if (((vert[1][1] - vert[2][1])*(vert[0][0]-vert[2][0])) + ((vert[2][0]-vert[1][0])*(vert[0][1]-vert[2][1])) != 0):
-        #     print(f"haha {counter}")
-        #     counter+=1 # set up a counter to see
+       
+        denom = (((vert[1][1] - vert[2][1])*(vert[0][0]-vert[2][0])) + ((vert[2][0]-vert[1][0])*(vert[0][1]-vert[2][1])))
 
-
-        w1 = (((vert[1][1] - vert[2][1])*(coord[0] - vert[2][0])) + ((vert[2][0]-vert[1][0])*(coord[1]-vert[2][1])) /
-                ((vert[1][1] - vert[2][1])*(vert[0][0]-vert[2][0])) + ((vert[2][0]-vert[1][0])*(vert[0][1]-vert[2][1]))
-                )
-
-        w2 = (((vert[2][1] - vert[0][1])*(coord[0] - vert[2][0])) + ((vert[0][0]-vert[2][0])*(coord[1] - vert[2][1])) /
-              ((vert[1][1] - vert[2][1])*(vert[0][0]-vert[2][0])) + ((vert[2][0]-vert[1][0])*(vert[0][1]-vert[2][1]))
-                )            
+        w1_nom = ((vert[1][1] - vert[2][1])*(coord[0] - vert[2][0])) + ((vert[2][0]-vert[1][0])*(coord[1]-vert[2][1])) 
+        w2_nom = ((vert[2][1] - vert[0][1])*(coord[0] - vert[2][0])) + ((vert[0][0]-vert[2][0])*(coord[1] - vert[2][1])) 
+        w1= w1_nom/denom
+        w2= w2_nom/denom
         w3 = 1 - w1 - w2
-        # once weight found multiply weight with the z values at vertex of each triangle
-        z_val = vert[0][2]*w1 + vert[1][2]*w2 + vert[2][2]*w3
+        # # once weight found multiply weight with the z values at vertex of each triangle
+        z_val = (vert[0][2]*w1) + (vert[1][2]*w2) + (vert[2][2]*w3)
+        print(z_val)
         rast_z.append(z_val)
-
+    #write to file
     rast_z = np.array(rast_z).reshape(no_x, no_y)    
     filename = j_tin['output-file']
     asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
