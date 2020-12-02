@@ -53,10 +53,12 @@ def raster_frame_creator(np_list ,cellsize):
     #raster creation
     rast_x = np.arange(bbox[0][0],bbox[1][0], cellsize)
     rast_y = np.arange(bbox[0][1],bbox[1][1], cellsize)
-    # rast_x = np.flip(rast_x)
-    rast_y = np.flip(rast_y)
+    rast_x = np.flip(rast_x)
+    # rast_y = np.flip(rast_y)
 
     rast_coord = np.array([[i,j] for i in rast_x for j in rast_y])
+    rast_coord = np.flipud(rast_coord)
+    # rast_coord = np.fliplr(rast_coord)
     # r = rast_coord.reshape(int(no_x), int(no_y) )
     # r = np.rot90(r,1)
     # rast_coord = r.flatten()
@@ -269,7 +271,7 @@ def tin_interpolation(list_pts_3d, j_tin):
         # print(z_val)
         rast_z.append(z_val)
     #write to file
-    rast_z = np.array(rast_z)#.reshape(no_y, no_x)    
+    rast_z = np.array(rast_z).reshape(no_y, no_x)    
     filename = j_tin['output-file']
     asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
     
