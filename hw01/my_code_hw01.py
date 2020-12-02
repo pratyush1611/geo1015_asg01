@@ -7,14 +7,13 @@
 
 
 #-- import outside the standard Python library are not allowed, just those:
-#%%
+
 import math
 import numpy as np
 import scipy.spatial
 import startin 
 #-----
 
-#%%
 def raster_frame_creator(np_list ,cellsize):
     """returns raster as a 1d array (list of all coordinates of pixels referring to lower left)
     the no of cells as a tuple and the bounding box         
@@ -63,7 +62,6 @@ def asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z):
     fh.close()
     print("File written to", filename)    
 
-#%%
 def nn_interpolation(list_pts_3d, j_nn):
     """
     !!! TO BE COMPLETED !!!
@@ -111,7 +109,6 @@ def nn_interpolation(list_pts_3d, j_nn):
     asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
 
 
-#%%
 def idw_interpolation(list_pts_3d, j_idw):
     """
     !!! TO BE COMPLETED !!!
@@ -194,7 +191,6 @@ def idw_interpolation(list_pts_3d, j_idw):
     asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
     
 
-#%%
 def tin_interpolation(list_pts_3d, j_tin):
     """
     !!! TO BE COMPLETED !!!
@@ -250,7 +246,6 @@ def tin_interpolation(list_pts_3d, j_tin):
     filename = j_tin['output-file']
     asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
     
-#%%
 def kriging_interpolation(list_pts_3d, j_kriging):
     """
     !!! TO BE COMPLETED !!!
