@@ -53,14 +53,20 @@ def raster_frame_creator(np_list ,cellsize):
     #raster creation
     rast_x = np.arange(bbox[0][0],bbox[1][0], cellsize)
     rast_y = np.arange(bbox[0][1],bbox[1][1], cellsize)
-    rast_x = np.flip(rast_x)
+    # rast_x = np.flip(rast_x)
+    rast_y = np.flip(rast_y)
 
     rast_coord = np.array([[i,j] for i in rast_x for j in rast_y])
-
+    # r = rast_coord.reshape(int(no_x), int(no_y) )
+    # r = np.rot90(r,1)
+    # rast_coord = r.flatten()
+    # print(rast_coord)
     return(rast_coord , z_list , (no_x, no_y) , bbox)
 
 def asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z):
     ##writing asc file
+    # rast_z = np.rot90(rast_z, k=1, axes=(1, 0))
+    # rast_z = rast_z.T
     fh = open(filename, "w")
     fh.write(f"NCOLS {no_y}\nNROWS {no_x}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE {-9999}\n") 
     for i in rast_z:
@@ -94,8 +100,17 @@ def nn_interpolation(list_pts_3d, j_nn):
     kd = scipy.spatial.KDTree(list_pts)
     
     rast_z = []
-    
+    dt = scipy.spatial.Delaunay(np_list[:,[0,1]])
     for coord in rast_coord:
+        tri_indx =  dt.find_simplex(coord)
+        if (not tri_indx) :
+            # NODATA
+            rast_z.append(-9999)
+            continue
+        elif (tri_indx == -1):
+            # NODATA
+            rast_z.append(-9999)            
+            continue
         _ , indx = kd.query(coord, k=1)
         rast_z.append(z_list[indx])
     
@@ -148,8 +163,18 @@ def idw_interpolation(list_pts_3d, j_idw):
     
     kd = scipy.spatial.KDTree(list_pts)
     idw_rast_z = []
-    
+    dt = scipy.spatial.Delaunay(np_list[:,[0,1]])
     for coord in rast_coord:
+        tri_indx =  dt.find_simplex(coord)
+        if (not tri_indx) :
+            # NODATA
+            idw_rast_z.append(-9999)
+            continue
+        elif (tri_indx == -1):
+            # NODATA
+            idw_rast_z.append(-9999)            
+            continue
+
         i = kd.query_ball_point(coord, radius)
         if not i: 
             idw_rast_z.append(-9999)
@@ -241,10 +266,10 @@ def tin_interpolation(list_pts_3d, j_tin):
         w3 = 1 - w1 - w2
         # # once weight found multiply weight with the z values at vertex of each triangle
         z_val = (vert[0][2]*w1) + (vert[1][2]*w2) + (vert[2][2]*w3)
-        print(z_val)
+        # print(z_val)
         rast_z.append(z_val)
     #write to file
-    rast_z = np.array(rast_z).reshape(no_x, no_y)    
+    rast_z = np.array(rast_z)#.reshape(no_y, no_x)    
     filename = j_tin['output-file']
     asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
     
@@ -263,7 +288,109 @@ def kriging_interpolation(list_pts_3d, j_kriging):
  
     """  
     
+    cellsize =  float(j_kriging['cellsize'])
+    radius =  float(j_kriging['radius'])
+
+    np_list = np.array(list_pts_3d)
     
-    print("File written to", j_kriging['output-file'])
+    rast_coord , z_list , (no_x, no_y), bbox = raster_frame_creator(np_list ,cellsize)
+
+    z_list = np_list[:,2].copy()
+    xmin , ymin = bbox[0]
+    
+    list_pts = np_list[:,[0,1]]
+    dt_start = startin.DT()
+    dt_start.insert(list_pts_3d)
+    dt_no_dup = dt_start.all_vertices()[1:]
+    dt_pt_2d = [(x,y) for x,y,z in dt_no_dup]
+    z_list = [(z) for x,y,z in dt_no_dup]
+    kd = scipy.spatial.KDTree(dt_pt_2d, 50)
+    krig_rast_z = []
+    # from the variogram.py file
+    # using gaussian
+    nugget = 1
+    sill = 1375
+    rng = 285
+
+    gam = lambda y : (nugget +sill * (1.0 - math.exp(-9.0*y*y/(rng**2))))
+    # with i j as points of type x,y
+    dist_xy = lambda i,j : (math.sqrt((j[1] - i[1])**2 + (j[0] - i[0])**2) )
+    cnt=0
+
+    dt = scipy.spatial.Delaunay(np_list[:,[0,1]])
+        # create dt
+
+    for coord in rast_coord:
+
+        tri_indx =  dt.find_simplex(coord)
+        if (not tri_indx) :
+            # NODATA
+            krig_rast_z.append(-9999)
+            continue
+        elif (tri_indx == -1):
+            # NODATA
+            krig_rast_z.append(-9999)            
+            continue
+        if not dt_start.locate(*coord):
+            krig_rast_z.append(-9999)
+            continue
+        i = kd.query_ball_point(coord, radius)
+        if not i: 
+            krig_rast_z.append(-9999)
+            continue
+
+        neighbor_coords = [dt_pt_2d[indx] for indx in i]
+        z_neighbor = [z_list[indx] for indx in i]
+        dist_from_neighbors = [dist_xy(neighbor , coord) for neighbor in neighbor_coords]
+        
+        #when one of the points is a neighbor of itself, or duplicate point
+        if 0 in dist_from_neighbors:
+            i = dist_from_neighbors.index(0)
+            krig_rast_z.append(z_neighbor[i])
+            continue
+        
+        #creating a covariance matrix for variogram
+        cov = []
+        for i in neighbor_coords:
+            cov_row = []
+            for j in neighbor_coords:
+                cov_row.append(gam(dist_xy(i,j)))
+            cov.append(cov_row+[1])
+            # cov.append([1]) #covariance matrix has 1 at end
+        cov.append([1]*len(neighbor_coords)+[0]) # last row
+        cov = np.array(cov) #convert to numpy array
+        
+        #creatnig d matrix
+        d=[]
+        for i in neighbor_coords:
+            d.append([gam(dist_xy(i, coord))])
+        d.append([1]) # last value in vector
+        d=np.array(d ) #convert to np array
+
+        try:
+            #cov inverse @ d
+            w = np.matmul(np.linalg.inv(cov) , d)
+        except:
+            krig_rast_z.append(-9999)
+            # print(f"here at try except {cnt}")
+            # cnt+=1
+            continue
+        #calculate weight matrix
+        weights_arr = [weight_val[0] for weight_val in w[:-1]]
+        
+        normalized_w = [w_/sum(weights_arr) for w_ in weights_arr] if sum(weights_arr) else weights_arr
+        z = sum([z_*wt for z_ ,wt in zip(z_neighbor, normalized_w)])
+        if z<0 and z>-9999:
+            print(z)
+        krig_rast_z.append(z)
+
+    rast_z = np.array(krig_rast_z)
+    rast_z = rast_z.reshape(int(no_x), int(no_y))
+    # print(rast_z.shape)
+
+    filename = j_kriging['output-file']
+    asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
+
+    # print("File written to", j_kriging['output-file'])
 
 # %%
