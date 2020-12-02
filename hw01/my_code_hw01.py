@@ -45,32 +45,19 @@ def raster_frame_creator(np_list ,cellsize):
     
     bbox = ((xmin,ymin) , (xmin + no_x*cellsize , ymin + no_y*cellsize))
 
-
-    #create convex hull
-    conv_points = np_list[:,[0,1]]
-    hull = scipy.spatial.ConvexHull(conv_points).simplices
-
     #raster creation
     rast_x = np.arange(bbox[0][0],bbox[1][0], cellsize)
     rast_y = np.arange(bbox[0][1],bbox[1][1], cellsize)
-    # rast_x = np.flip(rast_x)
-    # rast_y = np.flip(rast_y)
-
-    rast_coord = np.array([[i,j] for i in rast_x for j in rast_y])
+    rast_coord = np.array([[i,j] for j in rast_y for i in rast_x])
     rast_coord = np.flipud(rast_coord)
-    # rast_coord = np.fliplr(rast_coord)
-    # r = rast_coord.reshape(int(no_x), int(no_y) )
-    # r = np.rot90(r,1)
-    # rast_coord = r.flatten()
-    # print(rast_coord)
     return(rast_coord , z_list , (no_x, no_y) , bbox)
 
 def asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z):
     ##writing asc file
-    # rast_z = np.rot90(rast_z, k=1, axes=(1, 0))
-    # rast_z = rast_z.T
+    rast_z = rast_z.reshape(no_y , no_x)
+    rast_z = np.fliplr(rast_z)
     fh = open(filename, "w")
-    fh.write(f"NCOLS {no_y}\nNROWS {no_x}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE {-9999}\n") 
+    fh.write(f"NCOLS {no_x}\nNROWS {no_y}\nXLLCORNER {xmin}\nYLLCORNER {ymin}\nCELLSIZE {cellsize}\nNODATA_VALUE {-9999}\n") 
     for i in rast_z:
         fh.write(" ".join([str(_) for _ in i]) + '\n')
     fh.close()
@@ -118,11 +105,8 @@ def nn_interpolation(list_pts_3d, j_nn):
     
     #to put in the interpolation for z values
     rast_z=np.array(rast_z)
-    rast_z=rast_z.reshape(int(no_x), int(no_y))
+    rast_z=rast_z
 
-    #convex hull set anything outside it as     
-    #create convex hull
-    hull = scipy.spatial.ConvexHull(list_pts)
     filename = j_nn['output-file']
     asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
 
@@ -143,12 +127,6 @@ def idw_interpolation(list_pts_3d, j_idw):
     """  
     print("cellsize:", j_idw['cellsize'])
     print("radius:", j_idw['radius'])
-
-    #-- to speed up the nearest neighbour us a kd-tree
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html#scipy.spatial.KDTree
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
-    # kd = scipy.spatial.KDTree(list_pts)
-    # i = kd.query_ball_point(p, radius)
 
     cellsize =  float(j_idw['cellsize'])
     radius =  float(j_idw['radius'])
@@ -209,11 +187,8 @@ def idw_interpolation(list_pts_3d, j_idw):
             idw_rast_z.append(z_value)
 
     rast_z = np.array(idw_rast_z)
-    rast_z = rast_z.reshape(int(no_x), int(no_y))
+    rast_z = rast_z
 
-    #convex hull set anything outside it as     
-    #create convex hull
-    hull = scipy.spatial.ConvexHull(list_pts)
     filename = j_idw['output-file']
 
     asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
@@ -271,7 +246,7 @@ def tin_interpolation(list_pts_3d, j_tin):
         # print(z_val)
         rast_z.append(z_val)
     #write to file
-    rast_z = np.array(rast_z).reshape(no_y, no_x)    
+    rast_z = np.array(rast_z)#.reshape(no_x, no_y)    
     filename = j_tin['output-file']
     asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
     
@@ -374,25 +349,18 @@ def kriging_interpolation(list_pts_3d, j_kriging):
             w = np.matmul(np.linalg.inv(cov) , d)
         except:
             krig_rast_z.append(-9999)
-            # print(f"here at try except {cnt}")
-            # cnt+=1
+
             continue
         #calculate weight matrix
         weights_arr = [weight_val[0] for weight_val in w[:-1]]
         
         normalized_w = [w_/sum(weights_arr) for w_ in weights_arr] if sum(weights_arr) else weights_arr
         z = sum([z_*wt for z_ ,wt in zip(z_neighbor, normalized_w)])
-        if z<0 and z>-9999:
-            print(z)
         krig_rast_z.append(z)
 
     rast_z = np.array(krig_rast_z)
-    rast_z = rast_z.reshape(int(no_x), int(no_y))
-    # print(rast_z.shape)
+    rast_z = rast_z
 
     filename = j_kriging['output-file']
     asc_file(no_y, no_x, xmin, ymin, cellsize, filename, rast_z)
-
-    # print("File written to", j_kriging['output-file'])
-
 # %%
