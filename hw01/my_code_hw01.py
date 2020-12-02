@@ -53,7 +53,7 @@ def raster_frame_creator(np_list ,cellsize):
     #raster creation
     rast_x = np.arange(bbox[0][0],bbox[1][0], cellsize)
     rast_y = np.arange(bbox[0][1],bbox[1][1], cellsize)
-    rast_x = np.flip(rast_x)
+    # rast_x = np.flip(rast_x)
     # rast_y = np.flip(rast_y)
 
     rast_coord = np.array([[i,j] for i in rast_x for j in rast_y])
